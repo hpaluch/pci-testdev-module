@@ -20,6 +20,7 @@ Later has this important line:
 Early work in progress:
 * register/unregister device class `/sys/class/pci-testdev`
 * registered PCI probe/remove (not finished)
+* alloc PCI structure per card (device)
 
 # Preparing QEMU VM
 
@@ -96,12 +97,10 @@ pci_testdev: loading out-of-tree module taints kernel.
 pci_testdev: module verification failed: signature and/or required key missing - tainting kernel
 
 pci-testdev: registered class '/sys/class/pci-testdev'
-pci-testdev 0000:00:04.0: pci_testdev_probe(36): my PCI ID 1b36:0005
-pci-testdev: pci_testdev_probe not yet implemented, returning err=-22
-pci-testdev: probe of 0000:00:04.0 failed with error -22
+pci-testdev 0000:00:04.0: pci_testdev_probe(43): PCI ID 1b36:0005
+pci-testdev 0000:00:04.0: pci_testdev_probe(56): PCI ID 1b36:0005 adding instance 0x0020
 pci-testdev: registered PCI driver
-pci-testdev: WARNING! PCI probe is asynchronous! Probe can still fail!
-pci-testdev: v0.0.3 loaded DEBUG mode
+pci-testdev: WARNING! Individual card probe can still fail!
 ...
 ```
 
@@ -113,9 +112,10 @@ rmmod pci-testdev
 dmesg
 
 ...
+pci-testdev 0000:00:04.0: Freeing 00000000da64ef26
 pci-testdev: unregistered PCI driver
 pci-testdev: released class '/sys/class/pci-testdev'
-pci-testdev: v0.0.3 unloaded
+pci-testdev: v0.0.4 unloaded
 ...
 ```
 # Using Eclipse CDT IDE

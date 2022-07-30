@@ -18,7 +18,13 @@
 #define MOD_SYS_CLASS_PATH "/sys/class"
 #define MOD_CLASS "pci-testdev"
 #define MOD_NAME "pci-testdev"
-#define MOD_VER  "0.0.3"
+#define MOD_VER  "0.0.4"
+
+
+// structure per PCI device
+struct pci_testdev_card {
+	struct pci_dev *my_pci_dev;
+};
 
 static struct class *pci_testdev_class = NULL;
 
@@ -30,19 +36,46 @@ static const struct pci_device_id pci_ids[] = {
 static int pci_testdev_probe(struct pci_dev *pdev,
 		const struct pci_device_id *ent)
 {
+	struct pci_testdev_card *testdev_card = NULL;
 	int err = -EINVAL;
 
-	dev_dbg(&pdev->dev, "%s(%d): my PCI ID %04x:%04x\n",
+	dev_dbg(&pdev->dev, "%s(%d): PCI ID %04x:%04x\n",
 			__func__, __LINE__, pdev->vendor, pdev->device);
-	pr_err("%s: %s not yet implemented, returning err=%d\n",MOD_NAME,__func__,err);
+
+	testdev_card = kzalloc(sizeof(*testdev_card), GFP_KERNEL);
+	if (!testdev_card){
+		dev_err(&pdev->dev,"Unable to alloc %d bytes\n",(int)sizeof(*testdev_card));
+		err = -ENOMEM;
+		goto exit0;
+	}
+	testdev_card->my_pci_dev = pdev;
+	pci_set_drvdata(pdev, testdev_card);
+
+	err = 0;
+	dev_info(&pdev->dev, "%s(%d): PCI ID %04x:%04x adding instance 0x%04x\n",
+			__func__, __LINE__, pdev->vendor, pdev->device,pci_dev_id(pdev));
+
+exit0:
 	return err;
 }
 
 static void pci_testdev_remove(struct pci_dev *pdev)
 {
-	dev_dbg(&pdev->dev, "%s(%d): PTI PCI ID %04x:%04x\n",
-			__func__, __LINE__, pdev->vendor, pdev->device);
-	pr_err("%s: %s not yet implemented\n",MOD_NAME,__func__);
+	struct pci_testdev_card *testdev_card = pci_get_drvdata(pdev);
+
+	dev_dbg(&pdev->dev, "%s(%d): PCI ID %04x:%04x - instance %p device 0x%04x\n",
+			__func__, __LINE__, pdev->vendor, pdev->device,testdev_card,pci_dev_id(pdev));
+
+	if (!testdev_card){
+		dev_err(&pdev->dev,"Instance pointer of 0x%04x is NULL! - no release.\n",pci_dev_id(pdev));
+		return;
+	}
+	dev_dbg(&pdev->dev,"Freeing %p\n",testdev_card);
+	// invalidate data to crash dangling pointers
+	memset(testdev_card,254,sizeof(*testdev_card));
+	kfree(testdev_card);
+	testdev_card = NULL;
+	pci_set_drvdata(pdev, NULL);
 }
 
 static int pci_driver_reged = 0;
@@ -91,7 +124,7 @@ static int __init pci_testdev_init(void)
 	}
 	pci_driver_reged=1;
 	pr_debug("%s: registered PCI driver\n",MOD_NAME);
-	pr_debug("%s: WARNING! PCI probe is asynchronous! Probe can still fail!\n",MOD_NAME);
+	pr_debug("%s: WARNING! Individual card probe can still fail!\n",MOD_NAME);
 
 	pr_info("%s: v%s loaded"
 #ifdef DEBUG
