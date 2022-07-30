@@ -5,6 +5,7 @@
 
 # image
 *.qcow2
+*.sha256
 # module
 *.ko
 *.o
@@ -15,3 +16,4 @@
 *.order
 *.mod
 *.mod.c
+
