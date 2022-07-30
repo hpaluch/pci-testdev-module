@@ -21,6 +21,7 @@ Early work in progress:
 * register/unregister device class `/sys/class/pci-testdev`
 * registered PCI probe/remove (not finished)
 * alloc PCI structure per card (device)
+* enable PCI card
 
 # Preparing QEMU VM
 
@@ -96,9 +97,11 @@ dmesg
 pci_testdev: loading out-of-tree module taints kernel.
 pci_testdev: module verification failed: signature and/or required key missing - tainting kernel
 
+pci_testdev: no symbol version for pci_enable_device
 pci-testdev: registered class '/sys/class/pci-testdev'
-pci-testdev 0000:00:04.0: pci_testdev_probe(43): PCI ID 1b36:0005
-pci-testdev 0000:00:04.0: pci_testdev_probe(56): PCI ID 1b36:0005 adding instance 0x0020
+pci-testdev 0000:00:04.0: pci_testdev_probe(70): PCI ID 1b36:0005
+pci-testdev 0000:00:04.0: PCI card enabled
+pci-testdev 0000:00:04.0: pci_testdev_probe(91): PCI ID 1b36:0005 adding instance 0x0020
 pci-testdev: registered PCI driver
 pci-testdev: WARNING! Individual card probe can still fail!
 ...
@@ -112,10 +115,12 @@ rmmod pci-testdev
 dmesg
 
 ...
-pci-testdev 0000:00:04.0: Freeing 00000000da64ef26
+pci-testdev 0000:00:04.0: pci_testdev_remove(42): PCI ID 1b36:0005 - instance 00000000de237f04 device 0x0020
+pci-testdev 0000:00:04.0: cleanup - PCI card disabled
+pci-testdev 0000:00:04.0: Freeing 00000000de237f04
 pci-testdev: unregistered PCI driver
 pci-testdev: released class '/sys/class/pci-testdev'
-pci-testdev: v0.0.4 unloaded
+pci-testdev: v0.0.5 unloaded
 ...
 ```
 # Using Eclipse CDT IDE

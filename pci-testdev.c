@@ -18,12 +18,13 @@
 #define MOD_SYS_CLASS_PATH "/sys/class"
 #define MOD_CLASS "pci-testdev"
 #define MOD_NAME "pci-testdev"
-#define MOD_VER  "0.0.4"
+#define MOD_VER  "0.0.5"
 
 
 // structure per PCI device
 struct pci_testdev_card {
 	struct pci_dev *my_pci_dev;
+	int card_enabled; // flag for cleanup
 };
 
 static struct class *pci_testdev_class = NULL;
@@ -32,6 +33,32 @@ static const struct pci_device_id pci_ids[] = {
                 {PCI_DEVICE(MOD_PCI_VID, MOD_PCI_DID)},
                 {0}
 };
+
+static void pci_testdev_remove(struct pci_dev *pdev)
+{
+	struct pci_testdev_card *testdev_card = pci_get_drvdata(pdev);
+
+	dev_dbg(&pdev->dev, "%s(%d): PCI ID %04x:%04x - instance %p device 0x%04x\n",
+			__func__, __LINE__, pdev->vendor, pdev->device,testdev_card,pci_dev_id(pdev));
+
+	if (!testdev_card){
+		dev_err(&pdev->dev,"Instance pointer of 0x%04x is NULL! - no release.\n",pci_dev_id(pdev));
+		return;
+	}
+
+	if (testdev_card->card_enabled){
+		pci_disable_device(pdev);
+		dev_dbg(&pdev->dev,"cleanup - PCI card disabled\n");
+		testdev_card->card_enabled = 0;
+	}
+
+	dev_dbg(&pdev->dev,"Freeing %p\n",testdev_card);
+	// invalidate data to crash dangling pointers
+	memset(testdev_card,254,sizeof(*testdev_card));
+	kfree(testdev_card);
+	testdev_card = NULL;
+	pci_set_drvdata(pdev, NULL);
+}
 
 static int pci_testdev_probe(struct pci_dev *pdev,
 		const struct pci_device_id *ent)
@@ -51,31 +78,23 @@ static int pci_testdev_probe(struct pci_dev *pdev,
 	testdev_card->my_pci_dev = pdev;
 	pci_set_drvdata(pdev, testdev_card);
 
+	err = pci_enable_device(pdev);
+	if (err){
+		dev_err(&pdev->dev,"pci_enable_device() failed with err=%d\n", err);
+		goto exit1;
+	}
+	testdev_card->card_enabled = 1;
+	dev_dbg(&pdev->dev,"PCI card enabled\n");
+
 	err = 0;
 	dev_info(&pdev->dev, "%s(%d): PCI ID %04x:%04x adding instance 0x%04x\n",
 			__func__, __LINE__, pdev->vendor, pdev->device,pci_dev_id(pdev));
-
+	goto exit0;
+exit1:
+	dev_err(&pdev->dev,"Calling cleanup after err=%d\n",err);
+	pci_testdev_remove(pdev);
 exit0:
 	return err;
-}
-
-static void pci_testdev_remove(struct pci_dev *pdev)
-{
-	struct pci_testdev_card *testdev_card = pci_get_drvdata(pdev);
-
-	dev_dbg(&pdev->dev, "%s(%d): PCI ID %04x:%04x - instance %p device 0x%04x\n",
-			__func__, __LINE__, pdev->vendor, pdev->device,testdev_card,pci_dev_id(pdev));
-
-	if (!testdev_card){
-		dev_err(&pdev->dev,"Instance pointer of 0x%04x is NULL! - no release.\n",pci_dev_id(pdev));
-		return;
-	}
-	dev_dbg(&pdev->dev,"Freeing %p\n",testdev_card);
-	// invalidate data to crash dangling pointers
-	memset(testdev_card,254,sizeof(*testdev_card));
-	kfree(testdev_card);
-	testdev_card = NULL;
-	pci_set_drvdata(pdev, NULL);
 }
 
 static int pci_driver_reged = 0;
