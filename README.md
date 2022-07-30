@@ -105,6 +105,16 @@ dmesg
 pci-testdev: v0.0.1 unloaded
 ...
 ```
+# Using Eclipse CDT IDE
+
+You can basically follow:
+- https://wiki.eclipse.org/HowTo_use_the_CDT_to_navigate_Linux_kernel_source
+With these changes
+- use Import ... -> Existing Makefile Project -> and C and `GCC Linux` compiler
+- I recommend to create `KDIR` variable under Project -> Properties ->
+  C++ Build -> Build Variables pointing to `/usr/src/linux`
+- and then use above `KDIR` for all include paths in kernel source
+- you need to additionally define symbol `MODULE`
 
 # Resources
 * How to build external modules:
