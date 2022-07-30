@@ -30,11 +30,16 @@ And then just issue:
 ```bash
 make
 ```
+It should create module file `pci-testdev.ko`.
 
 # Testing
 
 You need same Linux version and kernel running under QEMU (because this device
 is available only for QEMU guests).
+
+To verify that you have same kernels run `name -r` both in SUSE host
+and guest. They must be same.
+
 Example of running such QEMU guest is in script `vm/run_qemu_suse.sh`
 
 If guest works properly you can do this in guest:
