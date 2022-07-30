@@ -10,10 +10,13 @@
 *.ko
 *.o
 *.d
-
 *.cmd
 *.symvers
 *.order
 *.mod
 *.mod.c
 
+# Eclipse CDT
+.project
+.cproject
+.settings
