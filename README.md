@@ -106,3 +106,8 @@ pci-testdev: v0.0.1 unloaded
 ...
 ```
 
+# Resources
+* How to build external modules:
+  - https://docs.kernel.org/kbuild/modules.html
+* How to prepare Eclipse CDT for kernel (module) development:
+  - https://wiki.eclipse.org/HowTo_use_the_CDT_to_navigate_Linux_kernel_source
