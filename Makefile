@@ -2,9 +2,9 @@
 
 KDIR ?= /lib/modules/`uname -r`/build
 
-default:
+all:
 	$(MAKE) -C $(KDIR) M=$(PWD) modules
 clean:
 	$(MAKE) -C $(KDIR) M=$(PWD) $@
 
-.PHONY: default clean
+.PHONY: all clean

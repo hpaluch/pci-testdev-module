@@ -17,7 +17,8 @@ Later has this important line:
 
 # Status
 
-Early work in progress - no useful code yet...
+Early work in progress:
+* register/unregister device class `/sys/class/pci-testdev`
 
 # Preparing QEMU VM
 
@@ -83,6 +84,8 @@ Example of running such QEMU guest is in script `vm/run_qemu_suse.sh`
 If guest works properly you can do this in guest:
 ```bash
 # openSUSE QEMU Guest
+# enable debug level in printk output:
+echo 8 > /proc/sys/kernel/printk
 
 insmod /mnt/host-home/USER/projects/pci-testdev-module/pci-testdev.ko
 dmesg
@@ -90,7 +93,8 @@ dmesg
 ...
 pci_testdev: loading out-of-tree module taints kernel.
 pci_testdev: module verification failed: signature and/or required key missing - tainting kernel
-pci-testdev: v0.0.1 loaded
+pci-testdev: registered class '/sys/class/pci-testdev'
+pci-testdev: v0.0.2 loaded DEBUG mode
 ...
 ```
 
@@ -102,7 +106,8 @@ rmmod pci-testdev
 dmesg
 
 ...
-pci-testdev: v0.0.1 unloaded
+pci-testdev: released class '/sys/class/pci-testdev'
+pci-testdev: v0.0.2 unloaded
 ...
 ```
 # Using Eclipse CDT IDE
