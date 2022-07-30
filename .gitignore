@@ -1,0 +1,17 @@
+# vim files
+*~
+*.swp
+*.bak
+
+# image
+*.qcow2
+# module
+*.ko
+*.o
+*.d
+
+*.cmd
+*.symvers
+*.order
+*.mod
+*.mod.c

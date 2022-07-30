@@ -1,0 +1,1 @@
+host-home       /mnt/host-home  9p ro,trans=virtio,_netdev 0 0
