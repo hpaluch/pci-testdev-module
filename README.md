@@ -19,6 +19,7 @@ Later has this important line:
 
 Early work in progress:
 * register/unregister device class `/sys/class/pci-testdev`
+* registered PCI probe/remove (not finished)
 
 # Preparing QEMU VM
 
@@ -93,8 +94,14 @@ dmesg
 ...
 pci_testdev: loading out-of-tree module taints kernel.
 pci_testdev: module verification failed: signature and/or required key missing - tainting kernel
+
 pci-testdev: registered class '/sys/class/pci-testdev'
-pci-testdev: v0.0.2 loaded DEBUG mode
+pci-testdev 0000:00:04.0: pci_testdev_probe(36): my PCI ID 1b36:0005
+pci-testdev: pci_testdev_probe not yet implemented, returning err=-22
+pci-testdev: probe of 0000:00:04.0 failed with error -22
+pci-testdev: registered PCI driver
+pci-testdev: WARNING! PCI probe is asynchronous! Probe can still fail!
+pci-testdev: v0.0.3 loaded DEBUG mode
 ...
 ```
 
@@ -106,8 +113,9 @@ rmmod pci-testdev
 dmesg
 
 ...
+pci-testdev: unregistered PCI driver
 pci-testdev: released class '/sys/class/pci-testdev'
-pci-testdev: v0.0.2 unloaded
+pci-testdev: v0.0.3 unloaded
 ...
 ```
 # Using Eclipse CDT IDE
@@ -122,6 +130,8 @@ With these changes
 - you need to additionally define symbol `MODULE`
 
 # Resources
+* Device Driver Design Patterns - how to support more than 1 PCI card...
+  - https://docs.kernel.org/driver-api/driver-model/design-patterns.html
 * How to build external modules:
   - https://docs.kernel.org/kbuild/modules.html
 * How to prepare Eclipse CDT for kernel (module) development:
