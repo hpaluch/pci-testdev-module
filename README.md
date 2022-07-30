@@ -19,6 +19,44 @@ Later has this important line:
 
 Early work in progress - no useful code yet...
 
+# Preparing QEMU VM
+
+At first download QEMU QCOW2 disk image. You can use script:
+```bash
+vm/download_suse_cloud.sh
+```
+Now we need to set root's password in this VM (it is locked). We will use
+this trick to mount such image:
+```bash
+sudo modprobe nbd max_part=8
+sudo qemu-nbd --connect=/dev/nbd0 `pwd`/vm/openSUSE-Leap-15.3.x86_64-NoCloud.qcow2
+sudo mkdir /mnt/sysimage
+sudo mount -t xfs /dev/nbd0p3 /mnt/sysimage
+```
+Now enter chroot into this image:
+```bash
+chroot /mnt/sysimage
+```
+Setup root's password:
+```bash
+# inside chroot!
+passwd
+```
+Also add line from `vm/fstab.addon` to `/etc/fstab` of this VM.
+And create directory for mount
+```bash
+# inside chroot!
+mkdir /mnt/host-home
+```
+Now we can exit chroot and unmount image:
+```bash
+# inside chroot!
+Ctrl-d # to exit chroot
+sudo umount /mnt/sysimage
+sudo qemu-nbd -d /dev/nbd0
+```
+Our SUSE VM should be ready.
+
 # Building
 
 I build it on host openSUSE 15.3 LEAP. Install these packages for building:
