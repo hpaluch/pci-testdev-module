@@ -38,26 +38,30 @@ static void pci_testdev_remove(struct pci_dev *pdev)
 {
 	struct pci_testdev_card *testdev_card = pci_get_drvdata(pdev);
 
-	dev_dbg(&pdev->dev, "%s(%d): PCI ID %04x:%04x - instance %p device 0x%04x\n",
-			__func__, __LINE__, pdev->vendor, pdev->device,testdev_card,pci_dev_id(pdev));
+	dev_dbg(&pdev->dev, "%s:%d PCI ID %04x:%04x SSID %04x:%04x  - instance 0x%p device - ENTER\n",
+			__func__, __LINE__,
+			pdev->vendor, pdev->device,pdev->subsystem_vendor,pdev->subsystem_device,
+			testdev_card);
 
 	if (!testdev_card){
-		dev_err(&pdev->dev,"Instance pointer of 0x%04x is NULL! - no release.\n",pci_dev_id(pdev));
+		dev_err(&pdev->dev,"PCI ID %04x:%04x SSID %04x:%04x - Instance pointer is NULL! - no release.\n",
+				pdev->vendor, pdev->device,pdev->subsystem_vendor,pdev->subsystem_device);
 		return;
 	}
 
 	if (testdev_card->card_enabled){
 		pci_disable_device(pdev);
-		dev_dbg(&pdev->dev,"cleanup - PCI card disabled\n");
+		dev_dbg(&pdev->dev,"%s:%d OK - PCI card disabled\n",__func__,__LINE__);
 		testdev_card->card_enabled = 0;
 	}
 
-	dev_dbg(&pdev->dev,"Freeing %p\n",testdev_card);
+	dev_dbg(&pdev->dev,"%s:%d Freeing %p\n",__func__,__LINE__,testdev_card);
 	// invalidate data to crash dangling pointers
 	memset(testdev_card,254,sizeof(*testdev_card));
 	kfree(testdev_card);
 	testdev_card = NULL;
 	pci_set_drvdata(pdev, NULL);
+	dev_dbg(&pdev->dev,"%s:%d - EXIT\n",__func__,__LINE__);
 }
 
 static int pci_testdev_probe(struct pci_dev *pdev,
@@ -66,12 +70,15 @@ static int pci_testdev_probe(struct pci_dev *pdev,
 	struct pci_testdev_card *testdev_card = NULL;
 	int err = -EINVAL;
 
-	dev_dbg(&pdev->dev, "%s(%d): PCI ID %04x:%04x\n",
-			__func__, __LINE__, pdev->vendor, pdev->device);
+	dev_dbg(&pdev->dev, "%s:%d PCI ID %04x:%04x SSID %04x:%04x - ENTER\n",
+			__func__, __LINE__, pdev->vendor, pdev->device,
+			pdev->subsystem_vendor,pdev->subsystem_device);
 
 	testdev_card = kzalloc(sizeof(*testdev_card), GFP_KERNEL);
 	if (!testdev_card){
-		dev_err(&pdev->dev,"Unable to alloc %d bytes\n",(int)sizeof(*testdev_card));
+		dev_err(&pdev->dev,"PCI ID %04x:%04x SSID %04x:%04x Unable to alloc %d bytes\n",
+				pdev->vendor, pdev->device,pdev->subsystem_vendor,pdev->subsystem_device,
+				(int)sizeof(*testdev_card));
 		err = -ENOMEM;
 		goto exit0;
 	}
@@ -80,20 +87,25 @@ static int pci_testdev_probe(struct pci_dev *pdev,
 
 	err = pci_enable_device(pdev);
 	if (err){
-		dev_err(&pdev->dev,"pci_enable_device() failed with err=%d\n", err);
+		dev_err(&pdev->dev,"pci_enable_device() failed with err=%d for PCI ID %04x:%04x SSID %04x:%04x\n",
+				err,pdev->vendor, pdev->device,pdev->subsystem_vendor,pdev->subsystem_device);
 		goto exit1;
 	}
 	testdev_card->card_enabled = 1;
-	dev_dbg(&pdev->dev,"PCI card enabled\n");
+	dev_dbg(&pdev->dev,"OK PCI card enabled\n");
 
 	err = 0;
-	dev_info(&pdev->dev, "%s(%d): PCI ID %04x:%04x adding instance 0x%04x\n",
-			__func__, __LINE__, pdev->vendor, pdev->device,pci_dev_id(pdev));
+	dev_info(&pdev->dev, "OK PCI ID %04x:%04x SSID %04x:%04x adding instance 0x%p\n",
+			pdev->vendor, pdev->device,pdev->subsystem_vendor,pdev->subsystem_device,
+			testdev_card);
 	goto exit0;
 exit1:
-	dev_err(&pdev->dev,"Calling cleanup after err=%d\n",err);
+	dev_err(&pdev->dev,"Calling cleanup for PCI ID %04x:%04x SSID %04x:%04x after err=%d\n",
+			pdev->vendor, pdev->device,pdev->subsystem_vendor,pdev->subsystem_device,
+			err);
 	pci_testdev_remove(pdev);
 exit0:
+	dev_dbg(&pdev->dev,"%s:%d - EXIT, err=%d\n",__func__, __LINE__,err);
 	return err;
 }
 
@@ -124,6 +136,7 @@ static int __init pci_testdev_init(void)
 {
 	int err = 0;
 
+	pr_debug("%s: %s:%d - ENTER\n",MOD_NAME,__func__,__LINE__);
     pci_testdev_class = class_create(THIS_MODULE, MOD_CLASS);
     if (IS_ERR(pci_testdev_class)) {
              err = PTR_ERR(pci_testdev_class);
@@ -135,15 +148,13 @@ static int __init pci_testdev_init(void)
 
 	err = pci_register_driver(&pci_testdev_pci_driver);
 	if (err) {
-		pr_err("%s(%d): PCI registration failed of %s driver\n",
-			__func__, __LINE__,MOD_NAME);
-		pr_err("%s(%d): Error value returned: %d\n",
-			__func__, __LINE__, err);
+		pr_err("%s: PCI registration failed with err=%d\n",
+			MOD_NAME,err);
 		goto exit0;
 	}
 	pci_driver_reged=1;
 	pr_debug("%s: registered PCI driver\n",MOD_NAME);
-	pr_debug("%s: WARNING! Individual card probe can still fail!\n",MOD_NAME);
+	pr_debug("%s: WARNING! Individual card probe may still fail!\n",MOD_NAME);
 
 	pr_info("%s: v%s loaded"
 #ifdef DEBUG
@@ -155,12 +166,15 @@ exit0:
 		pr_err("%s: init failed with err=%d\n",MOD_NAME,err);
 		pci_testdev_cleanup();
 	}
+	pr_debug("%s: %s:%d - EXIT, err=%d\n",MOD_NAME,__func__,__LINE__,err);
 	return err;
 }
 static void __exit pci_testdev_exit(void)
 {
+	pr_debug("%s: %s:%d - ENTER\n",MOD_NAME,__func__,__LINE__);
 	pci_testdev_cleanup();
 	pr_info("%s: v%s unloaded\n",MOD_NAME,MOD_VER);
+	pr_debug("%s: %s:%d - EXIT\n",MOD_NAME,__func__,__LINE__);
 }
 
 module_init(pci_testdev_init);

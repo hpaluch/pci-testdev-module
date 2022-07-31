@@ -97,13 +97,16 @@ dmesg
 pci_testdev: loading out-of-tree module taints kernel.
 pci_testdev: module verification failed: signature and/or required key missing - tainting kernel
 
-pci_testdev: no symbol version for pci_enable_device
+pci-testdev: pci_testdev_init:139 - ENTER
 pci-testdev: registered class '/sys/class/pci-testdev'
-pci-testdev 0000:00:04.0: pci_testdev_probe(70): PCI ID 1b36:0005
-pci-testdev 0000:00:04.0: PCI card enabled
-pci-testdev 0000:00:04.0: pci_testdev_probe(91): PCI ID 1b36:0005 adding instance 0x0020
+pci-testdev 0000:00:04.0: pci_testdev_probe:75 PCI ID 1b36:0005 SSID 1af4:1100 - ENTER
+pci-testdev 0000:00:04.0: OK PCI card enabled
+pci-testdev 0000:00:04.0: OK PCI ID 1b36:0005 SSID 1af4:1100 adding instance 0x000000001e53f4e1
+pci-testdev 0000:00:04.0: pci_testdev_probe:108 - EXIT, err=0
 pci-testdev: registered PCI driver
-pci-testdev: WARNING! Individual card probe can still fail!
+pci-testdev: WARNING! Individual card probe may still fail!
+pci-testdev: v0.0.5 loaded DEBUG mode
+pci-testdev: pci_testdev_init:169 - EXIT, err=0
 ...
 ```
 
@@ -115,12 +118,13 @@ rmmod pci-testdev
 dmesg
 
 ...
-pci-testdev 0000:00:04.0: pci_testdev_remove(42): PCI ID 1b36:0005 - instance 00000000de237f04 device 0x0020
-pci-testdev 0000:00:04.0: cleanup - PCI card disabled
-pci-testdev 0000:00:04.0: Freeing 00000000de237f04
+pci-testdev 0000:00:04.0: pci_testdev_remove:54 OK - PCI card disabled
+pci-testdev 0000:00:04.0: pci_testdev_remove:58 Freeing 000000001e53f4e1
+pci-testdev 0000:00:04.0: pci_testdev_remove:64 - EXIT
 pci-testdev: unregistered PCI driver
 pci-testdev: released class '/sys/class/pci-testdev'
 pci-testdev: v0.0.5 unloaded
+pci-testdev: pci_testdev_exit:177 - EXIT
 ...
 ```
 # Using Eclipse CDT IDE
