@@ -12,6 +12,7 @@
 #include <linux/printk.h>
 #include <linux/device.h>
 #include <linux/pci.h>
+#include <linux/io.h>
 
 #define MOD_PCI_VID 0x1b36
 #define MOD_PCI_DID 0x0005
@@ -25,6 +26,9 @@
 struct pci_testdev_card {
 	struct pci_dev *my_pci_dev;
 	int card_enabled; // flag for cleanup
+	int release_regions; // flag for cleanup
+	void __iomem *bar0_vaddr;
+	void __iomem *bar1_vaddr;
 };
 
 static struct class *pci_testdev_class = NULL;
@@ -38,30 +42,49 @@ static void pci_testdev_remove(struct pci_dev *pdev)
 {
 	struct pci_testdev_card *testdev_card = pci_get_drvdata(pdev);
 
-	dev_dbg(&pdev->dev, "%s:%d PCI ID %04x:%04x SSID %04x:%04x  - instance 0x%p device - ENTER\n",
+	pci_dbg(pdev, "%s:%d PCI ID %04x:%04x SSID %04x:%04x  - instance 0x%p device - ENTER\n",
 			__func__, __LINE__,
 			pdev->vendor, pdev->device,pdev->subsystem_vendor,pdev->subsystem_device,
 			testdev_card);
 
 	if (!testdev_card){
-		dev_err(&pdev->dev,"PCI ID %04x:%04x SSID %04x:%04x - Instance pointer is NULL! - no release.\n",
+		pci_err(pdev,"PCI ID %04x:%04x SSID %04x:%04x - Instance pointer is NULL! - no cleanup possible!\n",
 				pdev->vendor, pdev->device,pdev->subsystem_vendor,pdev->subsystem_device);
 		return;
 	}
 
+	if (testdev_card->bar1_vaddr){
+		pci_dbg(pdev,"Unmapping BAR%d from vaddr=%lx\n",1,(unsigned long)testdev_card->bar1_vaddr);
+		pci_iounmap(pdev,testdev_card->bar1_vaddr);
+		testdev_card->bar1_vaddr = NULL;
+	}
+
+	if (testdev_card->bar0_vaddr){
+		pci_dbg(pdev,"Unmapping BAR%d from vaddr=%lx\n",0,(unsigned long)testdev_card->bar0_vaddr);
+		pci_iounmap(pdev,testdev_card->bar0_vaddr);
+		testdev_card->bar0_vaddr = NULL;
+	}
+
+	if (testdev_card->release_regions){
+		pci_release_regions(pdev);
+		pci_dbg(pdev,"cleanup: PCI regions released\n");
+		testdev_card->release_regions = 0;
+	}
+
 	if (testdev_card->card_enabled){
 		pci_disable_device(pdev);
-		dev_dbg(&pdev->dev,"%s:%d OK - PCI card disabled\n",__func__,__LINE__);
+		pci_dbg(pdev,"cleanup: PCI card disabled\n");
 		testdev_card->card_enabled = 0;
 	}
 
-	dev_dbg(&pdev->dev,"%s:%d Freeing %p\n",__func__,__LINE__,testdev_card);
+	pci_dbg(pdev,"cleanup: Freeing testdev_card structure at 0x%p len %d\n",
+			testdev_card,(int)sizeof(*testdev_card));
 	// invalidate data to crash dangling pointers
 	memset(testdev_card,254,sizeof(*testdev_card));
 	kfree(testdev_card);
 	testdev_card = NULL;
 	pci_set_drvdata(pdev, NULL);
-	dev_dbg(&pdev->dev,"%s:%d - EXIT\n",__func__,__LINE__);
+	pci_dbg(pdev,"%s:%d - EXIT\n",__func__,__LINE__);
 }
 
 static int pci_testdev_probe(struct pci_dev *pdev,
@@ -93,6 +116,33 @@ static int pci_testdev_probe(struct pci_dev *pdev,
 	}
 	testdev_card->card_enabled = 1;
 	dev_dbg(&pdev->dev,"OK PCI card enabled\n");
+
+	err = pci_request_regions(pdev, MOD_NAME);
+	if (err){
+		dev_err(&pdev->dev,"pci_request_regions() failed with err=%d for PCI ID %04x:%04x SSID %04x:%04x\n",
+				err,pdev->vendor, pdev->device,pdev->subsystem_vendor,pdev->subsystem_device);
+		goto exit1;
+	}
+	testdev_card->release_regions=1;
+	dev_dbg(&pdev->dev,"OK PCI regions requested\n");
+
+	testdev_card->bar0_vaddr = pci_iomap(pdev, 0, 0);
+	if (testdev_card->bar0_vaddr==NULL){
+		pci_err(pdev,"pci_iomap(BAR%d) failed with err=%d for PCI ID %04x:%04x SSID %04x:%04x\n",
+				0,err,pdev->vendor, pdev->device,pdev->subsystem_vendor,pdev->subsystem_device);
+		goto exit1;
+	}
+	pci_dbg(pdev,"BAR%d mapped at vaddr %lx\n",0,(unsigned long)testdev_card->bar0_vaddr);
+
+	testdev_card->bar1_vaddr = pci_iomap(pdev, 1, 0);
+	if (testdev_card->bar1_vaddr==NULL){
+		pci_err(pdev,"pci_iomap(BAR%d) failed with err=%d for PCI ID %04x:%04x SSID %04x:%04x\n",
+				1,err,pdev->vendor, pdev->device,pdev->subsystem_vendor,pdev->subsystem_device);
+		goto exit1;
+	}
+	pci_dbg(pdev,"BAR%d mapped at vaddr %lx\n",1,(unsigned long)testdev_card->bar1_vaddr);
+
+	// TODO: There is also optional BAR2
 
 	err = 0;
 	dev_info(&pdev->dev, "OK PCI ID %04x:%04x SSID %04x:%04x adding instance 0x%p\n",
